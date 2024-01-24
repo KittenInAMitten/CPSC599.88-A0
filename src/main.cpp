@@ -64,6 +64,7 @@ void victoryFanfare();
 void failSound();
 void jackSound();
 void blinkLedPToggle();
+void blinkLedToggle();
 void blinkLedOn();
 void blinkLedOff();
 void p1Press();
@@ -154,9 +155,12 @@ void loop()
         // tone(buzzerPin, 1000);
         if (p1halt && p2halt)
         {
+            fail = 0;
+            currentLED = 0x00;
+            p1lastDebounceTime = millis();
+            p2lastDebounceTime = millis();
             p1halt = 0;
             p2halt = 0;
-            fail = 0;
             reactGo = 0;
             if (p1score >= 3 || p2score >= 3)
             {
@@ -170,6 +174,9 @@ void loop()
         else
         {
             if(millis() >= lastNoteTime + 400) {
+                if(p1score >= 3 || p2score >= 3) {    
+                    blinkLedToggle();
+                }
                 if(p1halt) {
                     currentLED = currentLED ^ 0b00001110;
                     setLedOn(currentLED);
@@ -211,12 +218,7 @@ unsigned int getScoreAsByte()
 
 void setScoreLeds()
 {
-
-    if (p1score >= 3 || p2score >= 3)
-    {
-        blinkLedOn();
-    }
-    else
+    if(p1score < 3 && p2score < 3)
     {
         blinkLedOff();
     }
@@ -418,17 +420,21 @@ void victoryFanfare()
     tone(buzzerPin, 523.25, 133);
     delay(133);
     delay(133);
-    blinkLedPToggle();
     tone(buzzerPin, 466.16, 133);
     delay(133);
+    blinkLedPToggle();
     tone(buzzerPin, 523.25, 1200);
     delay(133);
+    delay(266);
     blinkLedPToggle();
-    delay(400);
+    delay(133);
+    delay(266);
     blinkLedPToggle();
-    delay(400);
+    delay(133);
+    delay(266);
     blinkLedPToggle();
-    delay(400);
+    delay(133);
+    delay(266);
     blinkLedPToggle();
 }
 
@@ -464,6 +470,15 @@ void blinkLedPToggle()
     }
 }
 
+void blinkLedToggle() {
+    blinkToggle = !blinkToggle;
+    if(blinkToggle) {
+        digitalWrite(ledBPin, HIGH);
+    } else {
+        digitalWrite(ledBPin, LOW);
+    }
+}
+
 void blinkLedOn()
 {
     digitalWrite(ledBPin, HIGH);
@@ -485,7 +500,7 @@ void p1Press()
     {
         if (p1lastDebounceTime + debounceTime <= millis())
         {
-            if (!reactGo)
+            if (countingDown)
             {
                 fail = 1;
             }
@@ -506,7 +521,7 @@ void p2Press()
     {
         if (p2lastDebounceTime + debounceTime <= millis())
         {
-            if (!reactGo)
+            if (countingDown)
             {
                 fail = 1;
             }

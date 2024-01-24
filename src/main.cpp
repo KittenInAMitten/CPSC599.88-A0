@@ -37,7 +37,8 @@ int currentLED = 0b00000000;
 unsigned long sd = 0;
 unsigned long sdAdd = 0;
 
-int toggleVictory = 1;
+
+const float sm = 0.25;
 
 int reactGo = 0;
 int countingDown = 0;
@@ -46,6 +47,7 @@ volatile int fail = 0;
 void setLedOn(int byteToTurnOn);
 void p1Press();
 void p2Press();
+void setScoreLeds();
 void victoryFanfare();
 void failSound();
 void jackSound();
@@ -112,7 +114,7 @@ void loop()
         tone(buzzerPin, 698.46);
         countingDown = 0;
     }
-    else if(fail) {
+    else if(fail && countingDown) {
         failSound();
         noTone(buzzerPin);
         fail = 0;
@@ -126,21 +128,38 @@ void loop()
         // tone(buzzerPin, 1000);
         if (p1halt && p2halt)
         {
-            if (toggleVictory)
-            {
                 countingDown = 1;
                 p1halt = 0;
                 p2halt = 0;
                 jackSound();
-            }
-            toggleVictory = 0;
+            
         }
         else
         {
-            toggleVictory = 1;
             noTone(buzzerPin);
         }
     }
+    
+    setScoreLeds();
+}
+
+void setScoreLeds()
+{
+    unsigned int ledp1 = 0;
+    unsigned int ledp2 = 0;
+
+    for(int i = 0; i < min(p1score, 3); i++) {
+        ledp1 = (unsigned int)1 << 1 | ledp1 << 1;
+    }
+
+    for(int i = 0; i < min(p2score, 3); i++) {
+        ledp2 = ledp2 << 1 | (unsigned int)1;
+    }
+    ledp2 = ledp2 << (3 - p2score);
+
+    unsigned int ledsToTurnOn = (ledp2 << 5) | ledp1;
+
+    setLedOn(ledsToTurnOn);
 }
 
 void failSound()
@@ -163,8 +182,8 @@ void failSound()
 void playSound(unsigned int freq, unsigned long duration, unsigned long del)
 {
     if(!fail) {
-        tone(buzzerPin, freq, duration);
-        delay(del);
+        tone(buzzerPin, freq,  sm * (duration + sd));
+        delay(sm * (del + sd));
         sd = sd + sdAdd;
     }
 }
@@ -191,63 +210,64 @@ void jackSound()
     unsigned long lastNoteDelay = random(1500, 6500);
     sdAdd = random(15, 30);
 
+
     sd = 0;
 
     // Manually converted https://musescore.com/dakook_music/jack-in-the-box/piano-tutorial to frequencies and delays.
 
     // C_
-    playSound(C_, 350 + sd, 400 + sd);
+    playSound(C_,  (350),  (400));
 
     // FF GG
-    playSound(F, 350 + sd, 400 + sd);
-    playSound(F, 150 + sd, 200 + sd);
-    playSound(G, 350 + sd, 400 + sd);
-    playSound(G, 150 + sd, 200 + sd);
+    playSound(F,  (350),  (400));
+    playSound(F,  (150),  (200));
+    playSound(G,  (350),  (400));
+    playSound(G,  (150),  (200));
 
     // ACA F
-    playSound(A, 150 + sd, 200 + sd);
-    playSound(C, 150 + sd, 200 + sd);
-    playSound(A, 150 + sd, 200 + sd);
-    playSound(F, 350 + sd, 400 + sd);
+    playSound(A,  (150),  (200));
+    playSound(C,  (150),  (200));
+    playSound(A,  (150),  (200));
+    playSound(F,  (350),  (400));
 
     // C_
-    playSound(C_, 150 + sd, 200 + sd);
+    playSound(C_,  (150),  (200));
 
     // FF GG
-    playSound(F, 350 + sd, 400 + sd);
-    playSound(F, 150 + sd, 200 + sd);
-    playSound(G, 350 + sd, 400 + sd);
-    playSound(G, 150 + sd, 200 + sd);
+    playSound(F,  (350),  (400));
+    playSound(F,  (150),  (200));
+    playSound(G,  (350),  (400));
+    playSound(G,  (150),  (200));
 
     // A  F
-    playSound(A, 550 + sd, 600 + sd);
-    playSound(F, 350 + sd, 400 + sd);
+    playSound(A,  (550),  (600));
+    playSound(F,  (350),  (400));
 
     // C_
-    playSound(C_, 150 + sd, 200 + sd);
+    playSound(C_,  (150),  (200));
 
     // FF GG
-    playSound(F, 350 + sd, 400 + sd);
-    playSound(F, 150 + sd, 200 + sd);
-    playSound(G, 350 + sd, 400 + sd);
-    playSound(G, 150 + sd, 200 + sd);
+    playSound(F,  (350),  (400));
+    playSound(F,  (150),  (200));
+    playSound(G,  (350),  (400));
+    playSound(G,  (150),  (200));
 
     // ACA F
-    playSound(A, 150 + sd, 200 + sd);
-    playSound(C, 150 + sd, 200 + sd);
-    playSound(A, 150 + sd, 200 + sd);
-    playSound(F, 350 + sd, 450 + sd);
+    playSound(A,  (150),  (200));
+    playSound(C,  (150),  (200));
+    playSound(A,  (150),  (200));
+    playSound(F,  (350),  (450));
 
     // FFFFF G Bb (Can't do chord with one buzzer :c)
-    playSound(D__, 500 + sd, 550 + sd);
-    playSound(G, 350 + sd, 400 + sd);
-    playSound(Bb, 150 + sd, 200 + sd);
+    playSound(D__,  (500),  (550));
+    playSound(G,  (350),  (400));
+    playSound(Bb,  (150),  (200));
 
     // A
-    playSound(A, 550 + sd, 600 + sd);
+    playSound(A,  (550),  (600));
 
     if(!fail) {
-        delay(lastNoteDelay);
+        delay(sm * lastNoteDelay);
         reactGo = 1;
     }
 }
@@ -269,26 +289,18 @@ void victoryFanfare()
     // Ab - 415.30Hz / 830.6Hz
     // Bb - 466.16Hz / 932.33Hz
     // 1600ms/bar in 4/4
+
+    sd = 0;
     delay(150);
-    tone(buzzerPin, 523.25, 133);
-    delay(133);
-    tone(buzzerPin, 523.25, 133);
-    delay(133);
-    tone(buzzerPin, 523.25, 133);
-    delay(133);
-    tone(buzzerPin, 523.25, 400);
-    delay(400);
-    tone(buzzerPin, 415.30, 400);
-    delay(400);
-    tone(buzzerPin, 466.16, 400);
-    delay(400);
-    tone(buzzerPin, 523.25, 133);
-    delay(133);
-    delay(133);
-    tone(buzzerPin, 466.16, 133);
-    delay(133);
-    tone(buzzerPin, 523.25, 1200);
-    delay(1200);
+    playSound(523.25, 133, 133);
+    playSound(523.25, 133, 133);
+    playSound(523.25, 133, 133);
+    playSound(523.25, 400, 400);
+    playSound(415.30, 400, 400);
+    playSound(466.16, 400, 400);
+    playSound(523.25, 133, (133 * 2));
+    playSound(466.16, 133, 133);
+    playSound(523.25, 1200, 1200);
 }
 
 /// @brief Function to turn on an LED

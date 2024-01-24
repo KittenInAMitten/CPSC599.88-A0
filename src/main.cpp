@@ -28,8 +28,9 @@ const unsigned long debounceTime = 250;
 volatile int p1halt = 0;
 volatile int p2halt = 0;
 
-// int array that holds the values for 8 led pins in the IC
-int ledPinsIC[8];
+// Unused ledPinsIC array
+// // int array that holds the values for 8 led pins in the IC
+// int ledPinsIC[8];
 
 // ints to hold score
 int p1score = 0;
@@ -53,21 +54,20 @@ volatile int fail = 0;
 // blink assist toggle tracker
 int blinkToggle = 0;
 
-// finalNote
+// last note time to track how long the delay is
 unsigned long lastNoteTime = 0;
 
 void setLedOn(int byteToTurnOn);
-void blinkLedPOn();
-void blinkLedPOff();
-void blinkLedOn();
-void blinkLedOff();
-void p1Press();
-void p2Press();
+unsigned int getScoreAsByte();
 void setScoreLeds();
 void victoryFanfare();
 void failSound();
 void jackSound();
-unsigned int getScoreAsByte();
+void blinkLedPToggle();
+void blinkLedOn();
+void blinkLedOff();
+void p1Press();
+void p2Press();
 
 /// @brief  The setup
 void setup()
@@ -88,15 +88,16 @@ void setup()
     // initialize the buzzer pin as output:
     pinMode(buzzerPin, OUTPUT);
 
-    // Setting up LED registry values to light up individual LEDS
-    ledPinsIC[0] = 0b00000001;
-    ledPinsIC[1] = 0b00000010;
-    ledPinsIC[2] = 0b00000100;
-    ledPinsIC[3] = 0b00001000;
-    ledPinsIC[4] = 0b00010000;
-    ledPinsIC[5] = 0b00100000;
-    ledPinsIC[6] = 0b01000000;
-    ledPinsIC[7] = 0b10000000;
+    // Unused lendPinsIC array
+    // // Setting up LED registry values to light up individual LEDS
+    // ledPinsIC[0] = 0b00000001;
+    // ledPinsIC[1] = 0b00000010;
+    // ledPinsIC[2] = 0b00000100;
+    // ledPinsIC[3] = 0b00001000;
+    // ledPinsIC[4] = 0b00010000;
+    // ledPinsIC[5] = 0b00100000;
+    // ledPinsIC[6] = 0b01000000;
+    // ledPinsIC[7] = 0b10000000;
 
     // Attaching interrupts to the buttons
     attachInterrupt(digitalPinToInterrupt(p1button), p1Press, FALLING);
@@ -135,8 +136,9 @@ void loop()
         }
         blinkLedOn();
         tone(buzzerPin, 698.46);
+        lastNoteTime = 0;
     }
-    else if (fail && countingDown)
+    else if (fail)
     {
         countingDown = 0;
         reactGo = 0;
@@ -145,15 +147,17 @@ void loop()
         fail = 0;
         p1halt = 0;
         p2halt = 0;
+        lastNoteTime = 0;
     }
     else
     {
-        setScoreLeds();
         // tone(buzzerPin, 1000);
         if (p1halt && p2halt)
         {
             p1halt = 0;
             p2halt = 0;
+            fail = 0;
+            reactGo = 0;
             if (p1score >= 3 || p2score >= 3)
             {
                 p1score = 0;
@@ -165,13 +169,26 @@ void loop()
         }
         else
         {
+            if(millis() >= lastNoteTime + 400) {
+                if(p1halt) {
+                    currentLED = currentLED ^ 0b00001110;
+                    setLedOn(currentLED);
+                } else if(p2halt) {
+                    currentLED = currentLED ^ 0b11100000;
+                    setLedOn(currentLED);
+                } else {
+                    setScoreLeds();
+                }
+                lastNoteTime = millis();
+            }
             noTone(buzzerPin);
             countingDown = 0;
         }
     }
 }
 
-unsigned int getScoreAsByte() {
+unsigned int getScoreAsByte()
+{
 
     unsigned int ledp1 = 0;
     unsigned int ledp2 = 0;
@@ -199,7 +216,8 @@ void setScoreLeds()
     {
         blinkLedOn();
     }
-    else {
+    else
+    {
         blinkLedOff();
     }
 
@@ -207,7 +225,7 @@ void setScoreLeds()
 }
 
 void failSound()
-{   
+{
     setLedOn(0b00001110);
     tone(buzzerPin, 1174.66, 300);
     delay(175);
@@ -230,10 +248,13 @@ void failSound()
         delay(88);
         tone(buzzerPin, 987.77, 75);
         delay(88);
-        if(i % 2 == 0) {
+        if (i % 2 == 0)
+        {
             setLedOn(0x0);
-        } else {
-            
+        }
+        else
+        {
+
             setLedOn(0b00001110);
         }
     }
@@ -245,12 +266,13 @@ void playSound(unsigned int freq, unsigned long duration, unsigned long del)
     if (!fail)
     {
         blinkToggle = !blinkToggle;
-        if(blinkToggle) {
+        if (blinkToggle)
+        {
             setLedOn(random(2, 256));
-            // digitalWrite(ledBPin, HIGH);
-        } else {
+        }
+        else
+        {
             setLedOn(0);
-            // digitalWrite(ledBPin, LOW);
         }
 
         tone(buzzerPin, freq, sm * (duration + sd));
@@ -339,16 +361,19 @@ void jackSound()
     digitalWrite(ledBPin, LOW);
     setLedOn(0);
     lastNoteTime = millis();
-    while(millis() <= lastNoteTime + lastNoteDelay) {
-        if(fail) break;
+    while (millis() <= lastNoteTime + lastNoteDelay)
+    {
+        if (fail)
+            break;
     }
     if (!fail)
     {
         reactGo = 1;
-    } else {
+    }
+    else
+    {
         reactGo = 0;
     }
-
 }
 
 // From https://www.youtube.com/watch?v=iY98jcuKh5E
@@ -372,8 +397,7 @@ void victoryFanfare()
 
     delay(150);
 
-    blinkLedOn();
-    blinkLedPOn();
+    blinkLedPToggle();
 
     tone(buzzerPin, 523.25, 133);
     delay(133);
@@ -381,40 +405,31 @@ void victoryFanfare()
     delay(133);
     tone(buzzerPin, 523.25, 133);
     delay(133);
-    blinkLedOff();
-    blinkLedPOff();
+    blinkLedPToggle();
     tone(buzzerPin, 523.25, 400);
     delay(400);
-    blinkLedOn();
-    blinkLedPOn();
+    blinkLedPToggle();
     tone(buzzerPin, 415.30, 400);
     delay(400);
-    blinkLedOff();
-    blinkLedPOff();
+    blinkLedPToggle();
     tone(buzzerPin, 466.16, 400);
     delay(400);
-    blinkLedOn();
-    blinkLedPOn();
+    blinkLedPToggle();
     tone(buzzerPin, 523.25, 133);
     delay(133);
     delay(133);
-    blinkLedOff();
-    blinkLedPOff();
+    blinkLedPToggle();
     tone(buzzerPin, 466.16, 133);
     delay(133);
     tone(buzzerPin, 523.25, 1200);
     delay(133);
-    blinkLedOn();
-    blinkLedPOn();
+    blinkLedPToggle();
     delay(400);
-    blinkLedOff();
-    blinkLedPOff();
+    blinkLedPToggle();
     delay(400);
-    blinkLedOn();
-    blinkLedPOn();
+    blinkLedPToggle();
     delay(400);
-    blinkLedOff();
-    blinkLedPOff();
+    blinkLedPToggle();
 }
 
 /// @brief Function to turn on an LED
@@ -426,27 +441,36 @@ void setLedOn(int byteToTurnOn)
     digitalWrite(latchPin, HIGH);
 }
 
-void blinkLedPOn() {
-    if(p1halt) {
-        setLedOn(0b11101110 & getScoreAsByte());
-    } else if(p2halt) {
-        setLedOn(0b11101110 & getScoreAsByte());
+void blinkLedPToggle()
+{
+    blinkToggle = !blinkToggle;
+    if(blinkToggle) {
+        blinkLedOn();
+        if (p1halt)
+        {
+            setLedOn(0b11101110 & getScoreAsByte());
+        }
+        else if (p2halt)
+        {
+            setLedOn(0b11101110 & getScoreAsByte());
+        }
+    } else {
+        blinkLedOff();
+        if(p1halt) {
+            setLedOn(0b11100000 & getScoreAsByte());
+        } else if(p2halt) {
+            setLedOn(0b00001110 & getScoreAsByte());
+        }
     }
 }
 
-void blinkLedPOff() {
-    if(p1halt) {
-        setLedOn(0b11100000 & getScoreAsByte());
-    } else if(p2halt) {
-        setLedOn(0b00001110 & getScoreAsByte());
-    }
-}
-
-void blinkLedOn() {
+void blinkLedOn()
+{
     digitalWrite(ledBPin, HIGH);
 }
 
-void blinkLedOff() {
+void blinkLedOff()
+{
     digitalWrite(ledBPin, LOW);
 }
 

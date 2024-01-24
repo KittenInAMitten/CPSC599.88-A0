@@ -13,12 +13,13 @@ const int latchPin = 11;
 const int dataPin = 12;
 const int clockPin = 13;
 
+// Pin constants for LEDs
 const int ledBPin = 4;
 
 // Pin constants for speaker
 const int buzzerPin = 9;
 
-// debounce tracker to avoid single presses triggering multiple times
+// Debounce tracker to avoid single presses triggering multiple times
 volatile unsigned long p1lastDebounceTime = 0;
 volatile unsigned long p2lastDebounceTime = 0;
 const unsigned long debounceTime = 250;
@@ -34,17 +35,26 @@ int ledPinsIC[8];
 int p1score = 0;
 int p2score = 0;
 
+// int to hold the current LED configuration for the IC
 int currentLED = 0b00000000;
 
+// unsigned longs for sound delay adding
 unsigned long sd = 0;
 unsigned long sdAdd = 0;
 
+// constant song multiplier to speed up or slow down the song
 const float sm = 0.3;
 
+// state flags
 int reactGo = 0;
 int countingDown = 0;
-int blinkToggle = 0;
 volatile int fail = 0;
+
+// blink assist toggle tracker
+int blinkToggle = 0;
+
+// finalNote
+unsigned long lastNoteTime = 0;
 
 void setLedOn(int byteToTurnOn);
 void blinkLedPOn();
@@ -102,9 +112,9 @@ void setup()
 /// @brief The Game Loop
 void loop()
 {
-    setScoreLeds();
     if (reactGo)
     {
+        countingDown = 0;
         if (p1halt || p2halt)
         {
             reactGo = 0;
@@ -123,22 +133,22 @@ void loop()
             p1halt = 0;
             p2halt = 0;
         }
-
+        blinkLedOn();
         tone(buzzerPin, 698.46);
-        countingDown = 0;
     }
     else if (fail && countingDown)
     {
+        countingDown = 0;
+        reactGo = 0;
         failSound();
         noTone(buzzerPin);
         fail = 0;
-        reactGo = 0;
         p1halt = 0;
         p2halt = 0;
-        countingDown = 0;
     }
     else
     {
+        setScoreLeds();
         // tone(buzzerPin, 1000);
         if (p1halt && p2halt)
         {
@@ -185,9 +195,12 @@ unsigned int getScoreAsByte() {
 void setScoreLeds()
 {
 
-    if (p1score >= 3 || p2score >= 3 || reactGo)
+    if (p1score >= 3 || p2score >= 3)
     {
         blinkLedOn();
+    }
+    else {
+        blinkLedOff();
     }
 
     setLedOn(getScoreAsByte());
@@ -195,22 +208,36 @@ void setScoreLeds()
 
 void failSound()
 {   
+    setLedOn(0b00001110);
     tone(buzzerPin, 1174.66, 300);
     delay(175);
+    setLedOn(0x0);
     delay(175);
+    setLedOn(0b00001110);
     tone(buzzerPin, 1108.73, 300);
     delay(175);
+    setLedOn(0x0);
     delay(175);
+    setLedOn(0b00001110);
     tone(buzzerPin, 1046.50, 300);
     delay(175);
+    setLedOn(0x0);
     delay(175);
+    setLedOn(0b00001110);
     for (int i = 0; i < 7; i++)
     {
         tone(buzzerPin, 493.88, 75);
         delay(88);
         tone(buzzerPin, 987.77, 75);
         delay(88);
+        if(i % 2 == 0) {
+            setLedOn(0x0);
+        } else {
+            
+            setLedOn(0b00001110);
+        }
     }
+    setLedOn(0x0);
 }
 
 void playSound(unsigned int freq, unsigned long duration, unsigned long del)
@@ -219,10 +246,10 @@ void playSound(unsigned int freq, unsigned long duration, unsigned long del)
     {
         blinkToggle = !blinkToggle;
         if(blinkToggle) {
-            setLedOn(random(0, 256));
+            setLedOn(random(2, 256));
             // digitalWrite(ledBPin, HIGH);
         } else {
-            setLedOn(random(0, 256));
+            setLedOn(0);
             // digitalWrite(ledBPin, LOW);
         }
 
@@ -309,13 +336,19 @@ void jackSound()
     // A
     playSound(A, (550), (600));
 
+    digitalWrite(ledBPin, LOW);
+    setLedOn(0);
+    lastNoteTime = millis();
+    while(millis() <= lastNoteTime + lastNoteDelay) {
+        if(fail) break;
+    }
     if (!fail)
     {
-        delay(sm * lastNoteDelay);
         reactGo = 1;
+    } else {
+        reactGo = 0;
     }
 
-    digitalWrite(ledBPin, LOW);
 }
 
 // From https://www.youtube.com/watch?v=iY98jcuKh5E
@@ -424,11 +457,11 @@ void p1Press()
     {
         p1halt = 1;
     }
-    if (!p2halt)
+    else if (!p2halt && (countingDown || reactGo))
     {
         if (p1lastDebounceTime + debounceTime <= millis())
         {
-            if (countingDown)
+            if (!reactGo)
             {
                 fail = 1;
             }
@@ -445,11 +478,11 @@ void p2Press()
     {
         p2halt = 1;
     }
-    else if (!p1halt)
+    else if (!p1halt && (countingDown || reactGo))
     {
         if (p2lastDebounceTime + debounceTime <= millis())
         {
-            if (countingDown)
+            if (!reactGo)
             {
                 fail = 1;
             }

@@ -19,7 +19,7 @@ const int buzzerPin = 9;
 // debounce tracker to avoid single presses triggering multiple times
 volatile unsigned long p1lastDebounceTime = 0;
 volatile unsigned long p2lastDebounceTime = 0;
-const unsigned long debounceTime = 150;
+const unsigned long debounceTime = 250;
 
 // Volatile variables for interrupt button pushes;
 volatile int p1halt = 0;
@@ -35,6 +35,7 @@ int p2score = 0;
 int currentLED = 0b00000000;
 
 unsigned long sd = 0;
+unsigned long sdAdd = 0;
 
 int toggleVictory = 1;
 
@@ -85,6 +86,7 @@ void setup()
     setLedOn(0x00);
 
     randomSeed(analogRead(0));
+
 }
 
 /// @brief The Game Loop
@@ -117,9 +119,9 @@ void loop()
         // tone(buzzerPin, 1000);
         if (p1halt)
         {
-            countingDown = 1;
             if (toggleVictory)
             {
+                countingDown = 1;
                 // VictoryTheme();
                 jackSound();
                 // failSound();
@@ -187,7 +189,7 @@ void playSound(unsigned int freq, unsigned long duration, unsigned long del)
     if(!fail) {
         tone(buzzerPin, freq, duration);
         delay(del);
-        sd = sd + 10;
+        sd = sd + sdAdd;
     }
 }
 
@@ -211,6 +213,7 @@ void jackSound()
     unsigned int Bb = 932.33;
 
     unsigned long lastNoteDelay = random(1500, 6500);
+    sdAdd = random(15, 30);
 
     sd = 0;
 

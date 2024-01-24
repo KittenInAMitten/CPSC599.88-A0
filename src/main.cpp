@@ -96,7 +96,14 @@ void loop()
     {
         if(p1halt || p2halt) {
             reactGo = 0;
+            if(p1halt) {
+                p1score = p1score + 1;
+            }
+            else if(p2halt) {
+                p2score = p2score + 1;
+            }
             p1halt = 0;
+            p2halt = 0;
             fail = 0;
             noTone(buzzerPin);
             victoryFanfare();

@@ -17,8 +17,8 @@ const int clockPin = 13;
 const int buzzerPin = 9;
 
 // debounce tracker to avoid single presses triggering multiple times
-unsigned long p1lastDebounceTime = 0;
-unsigned long p2lastDebounceTime = 0;
+volatile unsigned long p1lastDebounceTime = 0;
+volatile unsigned long p2lastDebounceTime = 0;
 const unsigned long debounceTime = 150;
 
 // Volatile variables for interrupt button pushes;
@@ -39,6 +39,8 @@ unsigned long sd = 0;
 int toggleVictory = 1;
 
 int reactGo = 0;
+int countingDown = 0;
+volatile int fail = 0;
 
 void setLedOn(int byteToTurnOn);
 void p1Press();
@@ -88,28 +90,40 @@ void setup()
 /// @brief The Game Loop
 void loop()
 {   
-
     if (reactGo)
     {
         if(p1halt) {
             reactGo = 0;
             p1halt = 0;
+            fail = 0;
             noTone(buzzerPin);
+            VictoryTheme();
         }
 
         tone(buzzerPin, 698.46);
+        countingDown = 0;
+    }
+    else if(fail) {
+        failSound();
+        noTone(buzzerPin);
+        fail = 0;
+        reactGo = 0;
+        p1halt = 0;
+        p2halt = 0;
+        countingDown = 0;
     }
     else
     {
         // tone(buzzerPin, 1000);
         if (p1halt)
         {
+            countingDown = 1;
             if (toggleVictory)
             {
                 // VictoryTheme();
                 jackSound();
-                p1halt = 0;
                 // failSound();
+                p1halt = 0;
             }
             toggleVictory = 0;
         }
@@ -153,48 +167,50 @@ void loop()
 
 void failSound()
 {
-    tone(buzzerPin, 587.33, 400);
-    delay(400);
-    tone(buzzerPin, 554.37, 400);
-    delay(400);
-    tone(buzzerPin, 523.25, 400);
-    delay(400);
+    tone(buzzerPin, 1174.66, 300);
+    delay(350);
+    tone(buzzerPin, 1108.73, 300);
+    delay(350);
+    tone(buzzerPin, 1046.50, 300);
+    delay(350);
     for (int i = 0; i < 7; i++)
     {
-        tone(buzzerPin, 493.88, 100);
-        delay(100);
-        tone(buzzerPin, 987.77, 100);
-        delay(100);
+        tone(buzzerPin, 493.88, 75);
+        delay(90);
+        tone(buzzerPin, 987.77, 75);
+        delay(90);
     }
 }
 
 void playSound(unsigned int freq, unsigned long duration, unsigned long del)
 {
-    tone(buzzerPin, freq, duration);
-    delay(del);
-    sd = sd + 10;
+    if(!fail) {
+        tone(buzzerPin, freq, duration);
+        delay(del);
+        sd = sd + 10;
+    }
 }
 
 void jackSound()
 {
     unsigned int D__ = 1174.66;
     unsigned int C = 1046.5;
-    unsigned int B = 987.77;
+    //unsigned int B = 987.77;
     unsigned int A = 880.00;
     unsigned int G = 783.99;
     unsigned int F = 698.46;
-    unsigned int E = 659.25;
-    unsigned int D = 587.33;
+    //unsigned int E = 659.25;
+    //unsigned int D = 587.33;
     unsigned int C_ = 523.25;
-    unsigned int B_ = 493.88;
-    unsigned int A_ = 440.00;
-    unsigned int G_ = 392.00;
-    unsigned int F_ = 349.23;
-    unsigned int E_ = 329.63;
-    unsigned int D_ = 293.66;
+    //unsigned int B_ = 493.88;
+    //unsigned int A_ = 440.00;
+    //unsigned int G_ = 392.00;
+    //unsigned int F_ = 349.23;
+    //unsigned int E_ = 329.63;
+    //unsigned int D_ = 293.66;
     unsigned int Bb = 932.33;
 
-    unsigned long lastNoteDelay = random(900, 5000);
+    unsigned long lastNoteDelay = random(1500, 6500);
 
     sd = 0;
 
@@ -250,8 +266,11 @@ void jackSound()
 
     // A
     playSound(A, 550 + sd, 600 + sd);
-    delay(lastNoteDelay);
-    reactGo = 1;
+
+    if(!fail) {
+        delay(lastNoteDelay);
+        reactGo = 1;
+    }
 }
 
 // From https://www.youtube.com/watch?v=iY98jcuKh5E
@@ -304,11 +323,13 @@ void setLedOn(int byteToTurnOn)
 /// @brief Handles player 1 button press.
 void p1Press()
 {
-    // if(!p2halt) {
-    if (true)
+    if(!p2halt) 
     {
         if (p1lastDebounceTime + debounceTime <= millis())
         {
+            if(countingDown) {
+                fail = 1;
+            } 
             p1halt = 1;
             p1lastDebounceTime = millis();
         }
@@ -318,11 +339,13 @@ void p1Press()
 /// @brief Handles player 2 button press.
 void p2Press()
 {
-    // if(!p1halt) {
-    if (true)
+    if(!p1halt) 
     {
         if (p2lastDebounceTime + debounceTime <= millis())
         {
+            if(countingDown) {
+                fail = 1;
+            } 
             p2halt = 1;
             p2lastDebounceTime = millis();
         }

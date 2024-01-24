@@ -44,7 +44,7 @@ unsigned long sd = 0;
 unsigned long sdAdd = 0;
 
 // constant song multiplier to speed up or slow down the song
-const float sm = 0.3;
+const float sm = 0.75;
 
 // state flags
 int reactGo = 0;
@@ -274,7 +274,8 @@ void playSound(unsigned int freq, unsigned long duration, unsigned long del)
         }
         else
         {
-            setLedOn(0);
+            // setLedOn(0);
+            setLedOn(random(2, 256));
         }
 
         tone(buzzerPin, freq, sm * (duration + sd));
@@ -365,8 +366,10 @@ void jackSound()
     lastNoteTime = millis();
     while (millis() <= lastNoteTime + lastNoteDelay)
     {
-        if (fail)
+        if (fail) {
+            noTone(buzzerPin);
             break;
+        }
     }
     if (!fail)
     {

@@ -46,7 +46,7 @@ volatile int fail = 0;
 void setLedOn(int byteToTurnOn);
 void p1Press();
 void p2Press();
-void VictoryTheme();
+void victoryFanfare();
 void failSound();
 void jackSound();
 
@@ -94,12 +94,12 @@ void loop()
 {   
     if (reactGo)
     {
-        if(p1halt) {
+        if(p1halt || p2halt) {
             reactGo = 0;
             p1halt = 0;
             fail = 0;
             noTone(buzzerPin);
-            VictoryTheme();
+            victoryFanfare();
         }
 
         tone(buzzerPin, 698.46);
@@ -117,15 +117,14 @@ void loop()
     else
     {
         // tone(buzzerPin, 1000);
-        if (p1halt)
+        if (p1halt && p2halt)
         {
             if (toggleVictory)
             {
                 countingDown = 1;
-                // VictoryTheme();
-                jackSound();
-                // failSound();
                 p1halt = 0;
+                p2halt = 0;
+                jackSound();
             }
             toggleVictory = 0;
         }
@@ -134,36 +133,6 @@ void loop()
             toggleVictory = 1;
             noTone(buzzerPin);
         }
-
-        // if (p1halt)
-        // {
-        //     p1halt = 0;
-        //     currentLED = currentLED ^ ledPinsIC[1];
-        //     setLedOn(currentLED);
-        // }
-        // else if (p2halt)
-        // {
-        //     p2halt = 0;
-        //     currentLED = currentLED ^ ledPinsIC[2];
-        //     setLedOn(currentLED);
-        // }
-
-        // // tone(buzzerPin, 1000);
-        // if (currentLED == (ledPinsIC[1] | ledPinsIC[2]))
-        // {
-        //     if (toggleVictory)
-        //     {
-        //         // VictoryTheme();
-        //         jackSound();
-        //         // failSound();
-        //     }
-        //     toggleVictory = 0;
-        // }
-        // else
-        // {
-        //     toggleVictory = 1;
-        //     noTone(buzzerPin);
-        // }
     }
 }
 
@@ -277,7 +246,7 @@ void jackSound()
 }
 
 // From https://www.youtube.com/watch?v=iY98jcuKh5E
-void VictoryTheme()
+void victoryFanfare()
 {
     // Victory theme
     // D - 587.33Hz
@@ -293,6 +262,7 @@ void VictoryTheme()
     // Ab - 415.30Hz / 830.6Hz
     // Bb - 466.16Hz / 932.33Hz
     // 1600ms/bar in 4/4
+    delay(150);
     tone(buzzerPin, 523.25, 133);
     delay(133);
     tone(buzzerPin, 523.25, 133);
@@ -326,6 +296,9 @@ void setLedOn(int byteToTurnOn)
 /// @brief Handles player 1 button press.
 void p1Press()
 {
+    if(!countingDown && !reactGo) {
+        p1halt = 1;
+    }
     if(!p2halt) 
     {
         if (p1lastDebounceTime + debounceTime <= millis())
@@ -341,8 +314,11 @@ void p1Press()
 
 /// @brief Handles player 2 button press.
 void p2Press()
-{
-    if(!p1halt) 
+{   
+    if(!countingDown && !reactGo) {
+        p2halt = 1;
+    }
+    else if(!p1halt) 
     {
         if (p2lastDebounceTime + debounceTime <= millis())
         {

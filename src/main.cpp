@@ -1,5 +1,6 @@
 /*
-  CPSC 599.88 | A0: Hello World | Idea
+  CPSC 599.88 | A0: Hello World | Dr. Lora Oehlberg
+  Winter 2024 | UCID: 30089672 | C.S.
 */
 
 #include <Arduino.h>
@@ -9,8 +10,8 @@ const int p1button = 2;
 const int p2button = 3;
 
 // Pin constants for shift register/IC
-const int latchPin = 11;
-const int dataPin = 12;
+const int dataPin = 11;
+const int latchPin = 12;
 const int clockPin = 13;
 
 // Pin constants for LEDs
@@ -44,7 +45,7 @@ unsigned long sd = 0;
 unsigned long sdAdd = 0;
 
 // constant song multiplier to speed up or slow down the song
-const float sm = 0.75;
+const float sm = 0.65;
 
 // state flags
 int reactGo = 0;
@@ -114,11 +115,15 @@ void setup()
 /// @brief The Game Loop
 void loop()
 {
+    //If reactGo === When the blue LED stays on and last note of tune plays
     if (reactGo)
     {
         countingDown = 0;
+
+        //If a player presses their button
         if (p1halt || p2halt)
         {
+            //Reset flags and update scores/LEDs
             reactGo = 0;
             if (p1halt)
             {
@@ -135,12 +140,15 @@ void loop()
             p1halt = 0;
             p2halt = 0;
         }
+        //Play last note tone and have blue LED on
         blinkLedOn();
         tone(buzzerPin, 698.46);
         lastNoteTime = 0;
     }
+    //If a player hits their button early
     else if (fail)
     {
+        //Reset flags and play the fail sound
         countingDown = 0;
         reactGo = 0;
         failSound();
@@ -152,9 +160,10 @@ void loop()
     }
     else
     {
-        // tone(buzzerPin, 1000);
+        // If both players start the game
         if (p1halt && p2halt)
         {
+            //Reset flags
             fail = 0;
             currentLED = 0x00;
             p1lastDebounceTime = millis();
@@ -162,17 +171,20 @@ void loop()
             p1halt = 0;
             p2halt = 0;
             reactGo = 0;
+            //Reset scores if a player had already won in the previous round
             if (p1score >= 3 || p2score >= 3)
             {
                 p1score = 0;
                 p2score = 0;
                 setScoreLeds();
             }
+            //Set countingDown flag and start jackInTheBoxSound
             countingDown = 1;
             jackSound();
         }
         else
         {
+            //Otherwise, just blink a light if a player hits their button and is waiting for the toher
             if(millis() >= lastNoteTime + 400) {
                 if(p1score >= 3 || p2score >= 3) {    
                     blinkLedToggle();
@@ -188,18 +200,22 @@ void loop()
                 }
                 lastNoteTime = millis();
             }
+            //Make sure countingDown flag is false and there is no buzzer tone playing
             noTone(buzzerPin);
             countingDown = 0;
         }
     }
 }
 
+/// @brief This function simply gets the score as an 8-bit byte that is usable with my shift register configuration.
+/// @return The unsigned int in the form of an 8-bit byte
 unsigned int getScoreAsByte()
 {
 
     unsigned int ledp1 = 0;
     unsigned int ledp2 = 0;
 
+    //Use bitwise operators to manipulate the bits into getting the correct scores and placing them in the right bit spots
     for (int i = 0; i < min(p1score, 3); i++)
     {
         ledp1 = (unsigned int)1 << 1 | ledp1 << 1;
@@ -207,15 +223,17 @@ unsigned int getScoreAsByte()
 
     for (int i = 0; i < min(p2score, 3); i++)
     {
-        ledp2 = ledp2 << 1 | (unsigned int)1;
+        ledp2 = ledp2 << 1 | (unsigned int) 1;
     }
     ledp2 = ledp2 << (3 - p2score);
 
+    //Ensure to left shift the player 2 bits due to shift register configuration
     unsigned int ledsToTurnOn = (ledp2 << 5) | ledp1;
 
     return ledsToTurnOn;
 }
 
+/// @brief Sets the score leds based on score, also disables the blue LED if there is no winner yet when called
 void setScoreLeds()
 {
     if(p1score < 3 && p2score < 3)
@@ -226,6 +244,8 @@ void setScoreLeds()
     setLedOn(getScoreAsByte());
 }
 
+/// @brief Plays the "Sad Trombone" tune that I converted into frequencies and delay.
+/// I used https://www.youtube.com/watch?v=6-R-sIh1azY and https://pages.mtu.edu/~suits/notefreqs.html as reference
 void failSound()
 {
     setLedOn(0b00001110);
@@ -263,10 +283,15 @@ void failSound()
     setLedOn(0x0);
 }
 
+/// @brief A function that plays a sound based on freq, duration and delay. This is primarily for the jack in the box theme for custom functionality like LED blinking and delay randomizing
+/// @param freq The frequency of the tone
+/// @param duration The duration of the tone
+/// @param del The actual delay of how long to wait until it plays the next tone or continues
 void playSound(unsigned int freq, unsigned long duration, unsigned long del)
 {
     if (!fail)
     {
+        //Blink toggling and randomizing to give bouncing effect
         blinkToggle = !blinkToggle;
         if (blinkToggle)
         {
@@ -278,37 +303,29 @@ void playSound(unsigned int freq, unsigned long duration, unsigned long del)
             setLedOn(random(2, 256));
         }
 
+        //Play the tone and delay while also making the next notes play slower and slower
         tone(buzzerPin, freq, sm * (duration + sd));
         delay(sm * (del + sd));
         sd = sd + sdAdd;
     }
 }
 
+/// @brief Plays the "Jack in the Box" tune that I converted into frequencies and delay.
+/// I used https://musescore.com/dakook_music/jack-in-the-box and https://pages.mtu.edu/~suits/notefreqs.html as reference
 void jackSound()
 {
     unsigned int D__ = 1174.66;
     unsigned int C = 1046.5;
-    // unsigned int B = 987.77;
     unsigned int A = 880.00;
     unsigned int G = 783.99;
     unsigned int F = 698.46;
-    // unsigned int E = 659.25;
-    // unsigned int D = 587.33;
     unsigned int C_ = 523.25;
-    // unsigned int B_ = 493.88;
-    // unsigned int A_ = 440.00;
-    // unsigned int G_ = 392.00;
-    // unsigned int F_ = 349.23;
-    // unsigned int E_ = 329.63;
-    // unsigned int D_ = 293.66;
     unsigned int Bb = 932.33;
 
-    unsigned long lastNoteDelay = random(1500, 6500);
+    unsigned long lastNoteDelay = random(1500, 4500);
     sdAdd = random(15, 30);
 
     sd = 0;
-
-    // Manually converted https://musescore.com/dakook_music/jack-in-the-box/piano-tutorial to frequencies and delays.
 
     // C_
     playSound(C_, (350), (400));
@@ -363,6 +380,8 @@ void jackSound()
 
     digitalWrite(ledBPin, LOW);
     setLedOn(0);
+
+    //This section delays without delay to catch early presses
     lastNoteTime = millis();
     while (millis() <= lastNoteTime + lastNoteDelay)
     {
@@ -371,6 +390,7 @@ void jackSound()
             break;
         }
     }
+    //Only set reactGo flag when there was no early presses
     if (!fail)
     {
         reactGo = 1;
@@ -382,6 +402,10 @@ void jackSound()
 }
 
 // From https://www.youtube.com/watch?v=iY98jcuKh5E
+
+/// @brief Plays the "Final Fantasy - Victory Fanfare" tune that I converted into frequencies and delay.
+/// I used code that was provided in a reply to a comment by @PinchieMcPinch from https://www.youtube.com/watch?v=iY98jcuKh5E 
+/// Note: I used this as inspration on converting the two above tunes myself.
 void victoryFanfare()
 {
     // Victory theme
@@ -450,6 +474,7 @@ void setLedOn(int byteToTurnOn)
     digitalWrite(latchPin, HIGH);
 }
 
+/// @brief A blink toggle function for the score LEDs
 void blinkLedPToggle()
 {
     blinkToggle = !blinkToggle;
@@ -473,6 +498,7 @@ void blinkLedPToggle()
     }
 }
 
+/// @brief A blink toggle function for only the blue LED
 void blinkLedToggle() {
     blinkToggle = !blinkToggle;
     if(blinkToggle) {
@@ -482,11 +508,13 @@ void blinkLedToggle() {
     }
 }
 
+/// @brief Turn on the blue LED
 void blinkLedOn()
 {
     digitalWrite(ledBPin, HIGH);
 }
 
+/// @brief Turn off the blue LED
 void blinkLedOff()
 {
     digitalWrite(ledBPin, LOW);
@@ -495,14 +523,17 @@ void blinkLedOff()
 /// @brief Handles player 1 button press.
 void p1Press()
 {
+    //If no game has started yet, just set their halt to 1
     if (!countingDown && !reactGo)
     {
         p1halt = 1;
     }
+    //Otherwise, handle based on gamestate and apply debounce to avoid multiple triggers
     else if (!p2halt && (countingDown || reactGo))
     {
         if (p1lastDebounceTime + debounceTime <= millis())
-        {
+        {   
+            //If the player pressed during the countingDown phase, set fail flag
             if (countingDown)
             {
                 fail = 1;
@@ -516,14 +547,17 @@ void p1Press()
 /// @brief Handles player 2 button press.
 void p2Press()
 {
+    //If no game has started yet, just set their halt to 1
     if (!countingDown && !reactGo)
     {
         p2halt = 1;
     }
+    //Otherwise, handle based on gamestate and apply debounce to avoid multiple triggers
     else if (!p1halt && (countingDown || reactGo))
     {
         if (p2lastDebounceTime + debounceTime <= millis())
         {
+            //If the player pressed during the countingDown phase, set fail flag
             if (countingDown)
             {
                 fail = 1;

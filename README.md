@@ -7,4 +7,5 @@
 ## Instructions
 
 - This was coded in VSCode using **PlatformIO**. The main.cpp is located in the `src` folder which has everything needed to run the code on an arduino.
-- The code can be **copied and pasted** into the **Arduino ID**E and uploaded through a `.ino` file if need be.
+- The code can be **copied and pasted** into the **Arduino ID**E and uploaded through a `.ino` file if need be
+
